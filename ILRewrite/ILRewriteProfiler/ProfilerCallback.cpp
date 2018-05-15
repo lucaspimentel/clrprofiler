@@ -122,7 +122,7 @@ extern HRESULT SetILForManagedHelper(
 bool FileExists(const PCWSTR wszFilepath);
 
 // [private] Reads and executes a command from the file.
-void ReadFile(ICorProfilerCallback * m_pCallback,
+void ReJitMethod(ICorProfilerCallback * m_pCallback,
     IDToInfoMap<ModuleID, ModuleInfo> * m_iMap,
     BOOL fRejit,
     WCHAR wszModule[BUFSIZE],
@@ -1582,7 +1582,7 @@ void ProfilerCallback::LaunchLogListener()
     WCHAR wszModule[] = L"SampleApp";
     WCHAR wszClass[] = L"Main";
     WCHAR wszFunc[] = L"Do";
-    ReadFile(g_pCallbackObject, &m_moduleIDToInfoMap, TRUE, wszModule, wszClass, wszFunc);
+    ReJitMethod(g_pCallbackObject, &m_moduleIDToInfoMap, TRUE, wszModule, wszClass, wszFunc);
 }
 
 // [private] Wrapper method for the ICorProfilerCallback::RequestReJIT method, managing its errors.
@@ -1673,7 +1673,7 @@ bool FileExists(const PCWSTR wszFilepath)
 }
 
 // [private] Reads and runs a command from the command file.
-void ReadFile(ICorProfilerCallback * m_pCallback,
+void ReJitMethod(ICorProfilerCallback * m_pCallback,
     IDToInfoMap<ModuleID, ModuleInfo> * m_iMap,
     BOOL fRejit,
     WCHAR wszModule[BUFSIZE],
