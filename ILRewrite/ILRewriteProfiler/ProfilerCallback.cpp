@@ -112,7 +112,7 @@ extern HRESULT SetILForManagedHelper(
 	mdMethodDef mdIntPtrExplicitCast,
 	mdMethodDef mdPInvokeToCall);
 
-// Struct used to hold the arguments for creating the file watcher thread. 
+// Struct used to hold the arguments for creating the file watcher thread.
 // Used since threadstart uses a LPVOID parameter for the called function.
 struct threadargs
 {
@@ -123,7 +123,7 @@ struct threadargs
 
 //************************************************************************************************//
 
-//******************                    Forward Declarations                    ******************//            
+//******************                    Forward Declarations                    ******************//
 
 //************************************************************************************************//
 
@@ -157,7 +157,7 @@ static LPCWSTR GetPaddingString(int cSpaces)
 
 //************************************************************************************************//
 
-//******************              ProfilerCallBack  Implementation              ******************//            
+//******************              ProfilerCallBack  Implementation              ******************//
 
 //************************************************************************************************//
 
@@ -262,7 +262,7 @@ ProfilerCallback::ProfilerCallback() :
 	m_refCount(0),
 	m_dwShadowStackTlsIndex(0),
 
-    // Set threshold to a completely arbitrary number for demonstration purposes only. 
+    // Set threshold to a completely arbitrary number for demonstration purposes only.
     // If a function's inclusive time > m_dwThresholdMs, then the profiler's output will
     // flag the function as "long"
 	m_dwThresholdMs(100)
@@ -344,9 +344,9 @@ HRESULT ProfilerCallback::Initialize(IUnknown *pICorProfilerInfoUnk)
 
 	hr = m_pProfilerInfo->SetEventMask(
 		COR_PRF_MONITOR_MODULE_LOADS    |
-		COR_PRF_MONITOR_ASSEMBLY_LOADS  | 
-		COR_PRF_MONITOR_APPDOMAIN_LOADS | 
-		COR_PRF_MONITOR_JIT_COMPILATION | 
+		COR_PRF_MONITOR_ASSEMBLY_LOADS  |
+		COR_PRF_MONITOR_APPDOMAIN_LOADS |
+		COR_PRF_MONITOR_JIT_COMPILATION |
 		COR_PRF_ENABLE_REJIT            |
 		COR_PRF_DISABLE_ALL_NGEN_IMAGES);
 
@@ -426,7 +426,7 @@ HRESULT ProfilerCallback::ModuleLoadStarted(ModuleID moduleID)
 	return S_OK;
 }
 
-// [public] 
+// [public]
 // A lot of work needs to happen when modules load.  Here, we
 //      - add the module to the list of tracked modules for ReJIT
 //      - add metadata refs to this module (in case we want to rewrite methods
@@ -504,7 +504,7 @@ HRESULT ProfilerCallback::ModuleLoadFinished(ModuleID moduleID, HRESULT hrStatus
         }
     }
 
-    // Grab metadata interfaces 
+    // Grab metadata interfaces
 
     COMPtrHolder<IMetaDataEmit> pEmit;
     {
@@ -524,7 +524,7 @@ HRESULT ProfilerCallback::ModuleLoadFinished(ModuleID moduleID, HRESULT hrStatus
         COMPtrHolder<IUnknown> pUnk;
 
         hr = m_pProfilerInfo->GetModuleMetaData(moduleID, ofRead, IID_IMetaDataImport, &pUnk);
-        LOG_IFFAILEDRET(hr, L"IID_IMetaDataImport: GetModuleMetaData failed for ModuleID = " << 
+        LOG_IFFAILEDRET(hr, L"IID_IMetaDataImport: GetModuleMetaData failed for ModuleID = " <<
             HEX(moduleID) << L" (" << wszName << L")");
 
         hr = pUnk->QueryInterface(IID_IMetaDataImport, (LPVOID *) &pImport);
@@ -585,7 +585,7 @@ HRESULT ProfilerCallback::ModuleLoadFinished(ModuleID moduleID, HRESULT hrStatus
             COMPtrHolder<IUnknown> pUnk;
 
             hr = m_pProfilerInfo->GetModuleMetaData(moduleID, ofRead, IID_IMetaDataAssemblyImport, &pUnk);
-            LOG_IFFAILEDRET(hr, L"IID_IMetaDataImport: GetModuleMetaData failed for ModuleID = " << 
+            LOG_IFFAILEDRET(hr, L"IID_IMetaDataImport: GetModuleMetaData failed for ModuleID = " <<
                 HEX(moduleID) << L" (" << wszName << L")");
 
             hr = pUnk->QueryInterface(IID_IMetaDataAssemblyImport, (LPVOID *) &pAssemblyImport);
@@ -615,7 +615,7 @@ HRESULT ProfilerCallback::ModuleLoadFinished(ModuleID moduleID, HRESULT hrStatus
         ModuleIDToInfoMap::LockHolder lockHolder(&m_moduleIDToInfoMap);
 
         // Get the methodDef map for the Module just loaded handy
-        MethodDefToLatestVersionMap * pMethodDefToLatestVersionMap = 
+        MethodDefToLatestVersionMap * pMethodDefToLatestVersionMap =
             m_moduleIDToInfoMap.Lookup(moduleID).m_pMethodDefToLatestVersionMap;
         assert(pMethodDefToLatestVersionMap != NULL);
 
@@ -814,7 +814,7 @@ HRESULT ProfilerCallback::JITInlining(FunctionID callerID, FunctionID calleeID, 
 // method.  Here, we just do some light validation and logging.
 HRESULT ProfilerCallback::ReJITCompilationStarted(FunctionID functionID, ReJITID rejitId, BOOL fIsSafeToBlock)
 {
-	LOG_APPEND(L"ReJITScript::ReJITCompilationStarted for FunctionID '" << HEX(functionID) << 
+	LOG_APPEND(L"ReJITScript::ReJITCompilationStarted for FunctionID '" << HEX(functionID) <<
 		L"' - RejitID '" << HEX(rejitId) << L"' called");
 
 	HRESULT hr;
@@ -1235,7 +1235,7 @@ void ProfilerCallback::NtvEnteredFunction(ModuleID moduleIDCur, mdMethodDef mdCu
 	WCHAR wszMethodDefName[512];
 	GetClassAndFunctionNamesFromMethodDef(
 		moduleInfo.m_pImport,
-		moduleIDCur, 
+		moduleIDCur,
 		mdCur,
 		wszTypeDefName,
 		_countof(wszTypeDefName),
@@ -1268,7 +1268,7 @@ void ProfilerCallback::NtvExitedFunction(ModuleID moduleIDCur, mdMethodDef mdCur
 	WCHAR wszMethodDefName[512];
 	GetClassAndFunctionNamesFromMethodDef(
 		moduleInfo.m_pImport,
-		moduleIDCur, 
+		moduleIDCur,
 		mdCur,
 		wszTypeDefName,
 		_countof(wszTypeDefName),
@@ -1292,17 +1292,17 @@ void ProfilerCallback::NtvExitedFunction(ModuleID moduleIDCur, mdMethodDef mdCur
 	DWORD dwInclusiveMs = (GetTickCount64() - pFrame.m_ui64TickCountOnEntry) & 0xFFFFffff;
 	RESULT_APPEND(
         L"TID "
-        << HEX(GetCurrentThreadId()) 
-        << GetPaddingString((UINT) (pShadow->size()) * 4) 
-        << wszTypeDefName 
-        << "." 
-        << wszMethodDefName 
-        << L" exited. Inclusive ms: " 
-        << dwInclusiveMs 
-        << 
+        << HEX(GetCurrentThreadId())
+        << GetPaddingString((UINT) (pShadow->size()) * 4)
+        << wszTypeDefName
+        << "."
+        << wszMethodDefName
+        << L" exited. Inclusive ms: "
+        << dwInclusiveMs
+        <<
             (
                 (dwInclusiveMs > m_dwThresholdMs) ?
-		        L".**** THRESHOLD EXCEEDED ****" : 
+		        L".**** THRESHOLD EXCEEDED ****" :
                 L"."
             )
         );
@@ -1324,7 +1324,7 @@ void ProfilerCallback::NtvExitedFunction(ModuleID moduleIDCur, mdMethodDef mdCur
 
 //************************************************************************************************//
 
-//******************                      Private  Methods                      ******************//            
+//******************                      Private  Methods                      ******************//
 
 //************************************************************************************************//
 
@@ -1440,7 +1440,7 @@ void ProfilerCallback::AddMemberRefs(IMetaDataAssemblyImport * pAssemblyImport, 
 	// Generate typeRef to ILRewriteProfilerHelper.ProfilerHelper or the pre-existing mscorlib type
 	// that we're adding the managed helpers to.
 
-	LPCWSTR wszTypeToReference = 
+	LPCWSTR wszTypeToReference =
 		m_fInstrumentationHooksInSeparateAssembly ?
 		L"ILRewriteProfilerHelper.ProfilerHelper" :
 	    k_wszHelpersContainerType;
@@ -1579,11 +1579,11 @@ void ProfilerCallback::AddHelperMethodDefs(IMetaDataImport * pImport, IMetaDataE
 
 	// Get a dummy method implementation RVA (CLR doesn't like you passing 0).  Pick a
 	// ctor on the same type.
-	COR_SIGNATURE ctorSignature[] = 
+	COR_SIGNATURE ctorSignature[] =
 	{
 		IMAGE_CEE_CS_CALLCONV_HASTHIS, //__stdcall
 		0,
-		ELEMENT_TYPE_VOID 
+		ELEMENT_TYPE_VOID
 	};
 
 	mdMethodDef mdCtor = NULL;
@@ -1604,13 +1604,13 @@ void ProfilerCallback::AddHelperMethodDefs(IMetaDataImport * pImport, IMetaDataE
 	ULONG rvaCtor;
 	hr = pImport->GetMethodProps(
 		mdCtor,
-		NULL,		   // Put method's class here. 
-		NULL,		   // Put method's name here.  
-		0,			   // Size of szMethod buffer in wide chars.   
-		NULL,		   // Put actual size here 
-		NULL,		   // Put flags here.  
-		NULL,		   // [OUT] point to the blob value of meta data   
-		NULL,		   // [OUT] actual size of signature blob  
+		NULL,		   // Put method's class here.
+		NULL,		   // Put method's name here.
+		0,			   // Size of szMethod buffer in wide chars.
+		NULL,		   // Put actual size here
+		NULL,		   // Put flags here.
+		NULL,		   // [OUT] point to the blob value of meta data
+		NULL,		   // [OUT] actual size of signature blob
 		&rvaCtor,
 		NULL);
 
@@ -2037,7 +2037,7 @@ void ReadFile(FILE * fFile, LPVOID args)
                     for (int i=0; i < cMethodsFound; i++)
                     {
 					    // Update this module's version in the mapping.
-					    MethodDefToLatestVersionMap * pMethodDefToLatestVersionMap = 
+					    MethodDefToLatestVersionMap * pMethodDefToLatestVersionMap =
 						    m_moduleIDToInfoMap.Lookup(moduleIDs[i]).m_pMethodDefToLatestVersionMap;
 					    pMethodDefToLatestVersionMap->Update(methodDefs[i], fRejit ? g_nLastRefid : 0);
                     }

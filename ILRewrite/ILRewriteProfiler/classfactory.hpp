@@ -28,7 +28,7 @@ typedef HRESULT (__stdcall * PFN_CREATE_OBJ)(REFIID riid, void **ppInterface);
 //************************************************************************************//
 
 struct COCLASS_REGISTER
-{   
+{
 	const GUID *pClsid;             // Class ID of the coclass
 	const char *szProgID;           // Prog ID of the class
 	PFN_CREATE_OBJ pfnCreateObject; // function to create instance
@@ -37,10 +37,10 @@ struct COCLASS_REGISTER
 // this map contains the list of coclasses which are exported from this module
 const COCLASS_REGISTER g_CoClasses[] = {
 	&CLSID_PROFILER,
-	PROFILER_GUID,          
+	PROFILER_GUID,
 	ProfilerCallback::CreateObject,
-	NULL,               
-	NULL,               
+	NULL,
+	NULL,
 	NULL
 };
 
@@ -54,27 +54,27 @@ class CClassFactory :
 	public IClassFactory
 {
 private:
-	CClassFactory();                        
+	CClassFactory();
 
 public:
 	CClassFactory(const COCLASS_REGISTER *pCoClass);
 	~CClassFactory();
 
 public:
-	// IUnknown 
-	COM_METHOD(ULONG) AddRef();       
+	// IUnknown
+	COM_METHOD(ULONG) AddRef();
 	COM_METHOD(ULONG) Release();
-	COM_METHOD(HRESULT) QueryInterface(REFIID riid, void **ppInterface);            
+	COM_METHOD(HRESULT) QueryInterface(REFIID riid, void **ppInterface);
 
-	// IClassFactory 
+	// IClassFactory
 	COM_METHOD(HRESULT) LockServer(BOOL fLock);
 	COM_METHOD(HRESULT) CreateInstance(IUnknown *pUnkOuter,
 		REFIID riid,
 		void **ppInterface);
 
 private:
-	long m_refCount;                        
-	const COCLASS_REGISTER *m_pCoClass;     
+	long m_refCount;
+	const COCLASS_REGISTER *m_pCoClass;
 
 };
 
@@ -86,14 +86,14 @@ private:
 
 // <EMPTY> [private] CCLassFactory construction. Does nothing.
 CClassFactory::CClassFactory()
-{    
+{
 }
 
 // [public] CClassFactory construction, registering one item as pCoClass.
 CClassFactory::CClassFactory(const COCLASS_REGISTER *pCoClass) :
-	m_refCount(1), 
+	m_refCount(1),
 	m_pCoClass(pCoClass)
-{    
+{
 }
 
 // <EMPTY> [public] CClassFactory destruction. Does nothing (nothing to release anymore!).
@@ -109,9 +109,9 @@ ULONG CClassFactory::AddRef()
 
 // [public] Removes a reference to this ClassFactory and, if no longer referenced, deletes it.
 ULONG CClassFactory::Release()
-{    
+{
 	long refCount = InterlockedDecrement(&m_refCount);
-	if (refCount == 0) 
+	if (refCount == 0)
 		delete this;
 
 	return refCount;
@@ -119,10 +119,10 @@ ULONG CClassFactory::Release()
 
 // [public] Quesries the type of interface of this object.
 HRESULT CClassFactory::QueryInterface(REFIID riid, void **ppInterface)
-{    
+{
 	if (riid == IID_IUnknown)
 	{
-		*ppInterface = static_cast<IUnknown *>(this); 
+		*ppInterface = static_cast<IUnknown *>(this);
 	}
 	else if (riid == IID_IClassFactory)
 	{
@@ -130,7 +130,7 @@ HRESULT CClassFactory::QueryInterface(REFIID riid, void **ppInterface)
 	}
 	else
 	{
-		*ppInterface = NULL;                  
+		*ppInterface = NULL;
 		return E_NOINTERFACE;
 	}
 
@@ -141,7 +141,7 @@ HRESULT CClassFactory::QueryInterface(REFIID riid, void **ppInterface)
 
 // [public] Cretes an instance of the ppInstance.
 HRESULT CClassFactory::CreateInstance(IUnknown *pUnkOuter, REFIID riid, void **ppInstance)
-{       
+{
 	// aggregation is not supported by these objects
 	if (pUnkOuter != NULL)
 		return CLASS_E_NOAGGREGATION;
@@ -152,7 +152,7 @@ HRESULT CClassFactory::CreateInstance(IUnknown *pUnkOuter, REFIID riid, void **p
 
 // <EMPTY> [public] We are not required to hook any logic since this is always an in-process server.
 HRESULT CClassFactory::LockServer(BOOL fLock)
-{    
+{
 	return S_OK;
 }
 

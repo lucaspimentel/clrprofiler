@@ -1,18 +1,18 @@
 // ==++==
-// 
+//
 //   Copyright (c) Microsoft Corporation.  All rights reserved.
-// 
+//
 // ==--==
-// 
+//
 // #include this cpp file to get the definition and implementation of the ILRewriter
 // class.  This class contains a lot of general-purpose IL rewriting functionality,
 // which parses an IL stream into a structured linked list of IL instructions.  This
 // list can then be manipulated (items added / removed), and then rewritten back into an
 // IL stream, with things like branches automatically updated.
-// 
+//
 // Refer to the C functions at the bottom of this file for examples of how the
 // ILRewriter class can be used
-// 
+//
 
 #include "stdafx.h"
 #include "sigparse.inl"
@@ -148,15 +148,15 @@ static int k_rgnStackPushes[] = {
 
 #include "opcode.def"
 
-#undef Push0   
-#undef Push1   
-#undef PushI   
-#undef PushI4  
-#undef PushR4  
-#undef PushI8  
-#undef PushR8  
-#undef PushRef 
-#undef VarPush 
+#undef Push0
+#undef Push1
+#undef PushI
+#undef PushI4
+#undef PushR4
+#undef PushI8
+#undef PushR8
+#undef PushRef
+#undef VarPush
 #undef OPDEF
 };
 
@@ -198,13 +198,13 @@ public:
 	ILRewriter(ICorProfilerInfo * pICorProfilerInfo, ICorProfilerFunctionControl * pICorProfilerFunctionControl, ModuleID moduleID, mdToken tkMethod)
 		: m_pICorProfilerInfo(pICorProfilerInfo), m_pICorProfilerFunctionControl(pICorProfilerFunctionControl),
 		m_moduleId(moduleID), m_tkMethod(tkMethod),m_fGenerateTinyHeader(false),
-		m_pEH(NULL), m_pOffsetToInstr(NULL), m_pOutputBuffer(NULL), m_pIMethodMalloc(NULL), 
+		m_pEH(NULL), m_pOffsetToInstr(NULL), m_pOutputBuffer(NULL), m_pIMethodMalloc(NULL),
 		m_pMetaDataImport(NULL), m_pMetaDataEmit(NULL)
 	{
 		m_IL.m_pNext = &m_IL;
 		m_IL.m_pPrev = &m_IL;
 
-		m_nInstrs = 0;        
+		m_nInstrs = 0;
 	}
 
 	~ILRewriter()
@@ -612,7 +612,7 @@ again:
 					{
 					case 1 | OPCODEFLAGS_BranchTarget:
 						// Check if delta is too big to fit into an INT8.
-						// 
+						//
 						// (see #pragma at top of file)
 						if ((INT8)delta != delta)
 						{
@@ -851,7 +851,7 @@ again:
 			hr = CorSigUncompressData(&rgbOrigSig[iOrigSig],
 				4,                    // [IN] length of the signature
 				&cOrigLocals,         // [OUT] the expanded data
-				&cbOrigLocals);       // [OUT] length of the expanded data    
+				&cbOrigLocals);       // [OUT] length of the expanded data
 			if (FAILED(hr))
 			{
 				return 0;
@@ -866,8 +866,8 @@ again:
 			return 0;
 		}
 		ULONG cbNewLocals;
-		cbNewLocals = CorSigCompressData(cOrigLocals+1,         // [IN] given uncompressed data 
-			&rgbNewSig[iNewSig]);  // [OUT] buffer where iLen will be compressed and stored.   
+		cbNewLocals = CorSigCompressData(cOrigLocals+1,         // [IN] given uncompressed data
+			&rgbNewSig[iNewSig]);  // [OUT] buffer where iLen will be compressed and stored.
 		iNewSig += cbNewLocals;
 
 		if (cbOrigSig > 0)
@@ -894,9 +894,9 @@ again:
 		// We're done building up the new signature blob.  We now need to add it to
 		// the metadata for this module, so we can get a token back for it.
 		assert(iNewSig <= sizeof(rgbNewSig));
-		hr = m_pMetaDataEmit->GetTokenFromSig(&rgbNewSig[0],      // [IN] Signature to define.    
-			iNewSig,            // [IN] Size of signature data. 
-			&m_tkLocalVarSig);  // [OUT] returned signature token.  
+		hr = m_pMetaDataEmit->GetTokenFromSig(&rgbNewSig[0],      // [IN] Signature to define.
+			iNewSig,            // [IN] Size of signature data.
+			&m_tkLocalVarSig);  // [OUT] returned signature token.
 		if (FAILED(hr))
 		{
 			return 0;
@@ -968,22 +968,22 @@ again:
 HRESULT AddProbe(
 	ILRewriter * pilr,
 	ModuleID moduleID,
-	mdMethodDef methodDef, 
+	mdMethodDef methodDef,
 	int nVersion,
 	UINT iLocalVersion,
 	mdToken mdProbeRef,
 	ILInstr * pInsertProbeBeforeThisInstr)
 {
 	// Add a call before the instruction stream:
-	// 
+	//
 	// Replace
-	// 
+	//
 	//     ...
 	//     pInsertProbeBeforeThisInstr
 	//     ...
-	// 
+	//
 	// with
-	// 
+	//
 	//     ...
 	// #ifdef _X86_
 	//     ldc.i4 moduleID
@@ -1048,9 +1048,9 @@ HRESULT AddProbe(
 HRESULT AddEnterProbe(
 	ILRewriter * pilr,
 	ModuleID moduleID,
-	mdMethodDef methodDef, 
+	mdMethodDef methodDef,
 	int nVersion,
-	UINT iLocalVersion, 
+	UINT iLocalVersion,
 	mdToken mdEnterProbeRef)
 {
 	ILInstr * pFirstOriginalInstr = pilr->GetILList()->m_pNext;
@@ -1062,9 +1062,9 @@ HRESULT AddEnterProbe(
 HRESULT AddExitProbe(
 	ILRewriter * pilr,
 	ModuleID moduleID,
-	mdMethodDef methodDef, 
+	mdMethodDef methodDef,
 	int nVersion,
-	UINT iLocalVersion, 
+	UINT iLocalVersion,
 	mdToken mdExitProbeRef)
 {
 	HRESULT hr;
@@ -1155,9 +1155,9 @@ HRESULT SetILForManagedHelper(
 	mdMethodDef mdPInvokeToCall)
 {
 	ILRewriter rewriter(
-		pICorProfilerInfo, 
+		pICorProfilerInfo,
 		NULL, // no ICorProfilerFunctionControl for classic-style on-first-JIT instrumentation
-		moduleID, 
+		moduleID,
 		mdHelperToAdd);
 
 	rewriter.InitializeTiny();

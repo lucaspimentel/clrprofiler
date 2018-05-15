@@ -44,14 +44,14 @@ BOOL REGUTIL::SetKeyAndValue(const char *szKey, const char *szSubkey, const char
 
 	// create the registration key.
 	if (RegCreateKeyExA(
-		HKEY_CLASSES_ROOT, 
-		rcKey, 
-		0, 
+		HKEY_CLASSES_ROOT,
+		rcKey,
+		0,
 		NULL,
-		REG_OPTION_NON_VOLATILE, 
-		KEY_ALL_ACCESS, 
+		REG_OPTION_NON_VOLATILE,
+		KEY_ALL_ACCESS,
 		NULL,
-		&hKey, 
+		&hKey,
 		NULL)
 		== ERROR_SUCCESS)
 	{
@@ -59,10 +59,10 @@ BOOL REGUTIL::SetKeyAndValue(const char *szKey, const char *szSubkey, const char
 		if (szValue != NULL)
 		{
 			RegSetValueExA(
-				hKey, 
-				NULL, 
-				0, 
-				REG_SZ, 
+				hKey,
+				NULL,
+				0,
+				REG_SZ,
 				(BYTE *)szValue,
 				(DWORD)((strlen(szValue) + 1) * sizeof (char)));
 		}
@@ -70,9 +70,9 @@ BOOL REGUTIL::SetKeyAndValue(const char *szKey, const char *szSubkey, const char
 		RegCloseKey(hKey);
 
 		return TRUE;
-	}   
+	}
 
-	return FALSE;   
+	return FALSE;
 
 }
 
@@ -113,14 +113,14 @@ BOOL REGUTIL::SetRegValue(const char *szKeyName, const char *szKeyword, const ch
 
 	// create the registration key.
 	if (RegCreateKeyExA(
-		HKEY_CLASSES_ROOT, 
-		szKeyName, 
-		0, 
+		HKEY_CLASSES_ROOT,
+		szKeyName,
+		0,
 		NULL,
-		REG_OPTION_NON_VOLATILE, 
-		KEY_ALL_ACCESS, 
+		REG_OPTION_NON_VOLATILE,
+		KEY_ALL_ACCESS,
 		NULL,
-		&hKey, 
+		&hKey,
 		NULL)
 		== ERROR_SUCCESS)
 	{
@@ -128,11 +128,11 @@ BOOL REGUTIL::SetRegValue(const char *szKeyName, const char *szKeyword, const ch
 		if (szValue != NULL)
 		{
 			RegSetValueExA(
-				hKey, 
-				szKeyword, 
-				0, 
-				REG_SZ, 
-				(BYTE *)szValue, 
+				hKey,
+				szKeyword,
+				0,
+				REG_SZ,
+				(BYTE *)szValue,
 				(DWORD)((strlen(szValue) + 1) * sizeof (char)));
 		}
 
@@ -146,12 +146,12 @@ BOOL REGUTIL::SetRegValue(const char *szKeyName, const char *szKeyword, const ch
 
 // [public] Does standard registration of a CoClass with a progid.
 HRESULT REGUTIL::RegisterCOMClass(REFCLSID rclsid,
-											 const char *szDesc,                  
-											 const char *szProgIDPrefix,  
-											 int  iVersion,               
-											 const char *szClassProgID,   
+											 const char *szDesc,
+											 const char *szProgIDPrefix,
+											 int  iVersion,
+											 const char *szClassProgID,
 											 const char *szThreadingModel,
-											 const char *szModule) 
+											 const char *szModule)
 {
 	HRESULT hr;
 	char rcCLSID[MAX_LENGTH];           // CLSID\\szID.
@@ -176,10 +176,10 @@ HRESULT REGUTIL::RegisterCOMClass(REFCLSID rclsid,
 
 	// do the initial portion.
 	hr =  REGUTIL::_RegisterClassBase(
-		rclsid, 
-		szDesc, 
-		rcProgID, 
-		rcIndProgID, 
+		rclsid,
+		szDesc,
+		rcProgID,
+		rcIndProgID,
 		rcCLSID,
 		NumItems(rcCLSID));
 
@@ -198,7 +198,7 @@ HRESULT REGUTIL::RegisterCOMClass(REFCLSID rclsid,
 			"InprocServer32");
 
 		SetRegValue(rcInproc, "ThreadingModel", szThreadingModel);
-	}   
+	}
 
 	return hr;
 }
@@ -239,13 +239,13 @@ HRESULT REGUTIL::UnregisterCOMClass(REFCLSID rclsid, const char *szProgIDPrefix,
 
 	StringFromGUID2(rclsid, szWID, NumItems(szWID));
 	WideCharToMultiByte(
-		CP_ACP, 
-		0, 
-		szWID, 
-		-1, 
-		szID, 
-		sizeof(szID), 
-		NULL, 
+		CP_ACP,
+		0,
+		szWID,
+		-1,
+		szID,
+		sizeof(szID),
+		NULL,
 		NULL);
 
 	DeleteKey("CLSID", rcCLSID);
@@ -255,11 +255,11 @@ HRESULT REGUTIL::UnregisterCOMClass(REFCLSID rclsid, const char *szProgIDPrefix,
 
 // [private] Register the basics for a in proc server.
 HRESULT REGUTIL::_RegisterClassBase(REFCLSID rclsid,
-												const char *szDesc,                    
-												const char *szProgID,              
-												const char *szIndepProgID,         
+												const char *szDesc,
+												const char *szProgID,
+												const char *szIndepProgID,
 												__out_ecount(cchOutCLSID) char *szOutCLSID,
-												size_t cchOutCLSID)                
+												size_t cchOutCLSID)
 {
 	bool working = true;
 
@@ -268,13 +268,13 @@ HRESULT REGUTIL::_RegisterClassBase(REFCLSID rclsid,
 
 	StringFromGUID2(rclsid, szWID, NumItems(szWID));
 	WideCharToMultiByte(
-		CP_ACP, 
-		0, 
-		szWID, 
-		-1, 
-		szID, 
-		sizeof(szID), 
-		NULL, 
+		CP_ACP,
+		0,
+		szWID,
+		-1,
+		szID,
+		sizeof(szID),
+		NULL,
 		NULL);
 
 	// check if the output buffer is big enough to hold the result
@@ -318,13 +318,13 @@ HRESULT REGUTIL::_UnregisterClassBase(REFCLSID rclsid,
 
 	StringFromGUID2(rclsid, szWID, NumItems(szWID));
 	WideCharToMultiByte(
-		CP_ACP, 
-		0, 
-		szWID, 
-		-1, 
-		szID, 
-		sizeof(szID), 
-		NULL, 
+		CP_ACP,
+		0,
+		szWID,
+		-1,
+		szID,
+		sizeof(szID),
+		NULL,
 		NULL);
 
 	// check if the output buffer is big enough to hold the result

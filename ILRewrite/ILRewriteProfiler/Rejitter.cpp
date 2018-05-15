@@ -1,7 +1,7 @@
 // ==++==
-// 
+//
 //   Copyright (c) Microsoft Corporation.  All rights reserved.
-// 
+//
 // ==--==
 
 #include "stdafx.h"
@@ -9,7 +9,7 @@
 
 //---------------------------------------------------------------------------------------
 // Exports that managed code from ProfilerHelper.dll will P/Invoke into
-// 
+//
 // NOTE: Must keep these signatures in sync with the DllImports in ProfilerHelper.cs!
 //---------------------------------------------------------------------------------------
 
