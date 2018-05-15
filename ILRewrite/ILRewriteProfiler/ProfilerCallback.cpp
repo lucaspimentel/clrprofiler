@@ -112,15 +112,6 @@ extern HRESULT SetILForManagedHelper(
 	mdMethodDef mdIntPtrExplicitCast,
 	mdMethodDef mdPInvokeToCall);
 
-// Struct used to hold the arguments for creating the file watcher thread.
-// Used since threadstart uses a LPVOID parameter for the called function.
-struct threadargs
-{
-	ICorProfilerCallback * m_pCallback;
-	LPCWSTR m_wszpath;
-	IDToInfoMap<ModuleID, ModuleInfo> * m_iMap;
-};
-
 //************************************************************************************************//
 
 //******************                    Forward Declarations                    ******************//
@@ -131,7 +122,12 @@ struct threadargs
 bool FileExists(const PCWSTR wszFilepath);
 
 // [private] Reads and executes a command from the file.
-void ReadFile(FILE * fFile, LPVOID args);
+void ReadFile(ICorProfilerCallback * m_pCallback,
+	          IDToInfoMap<ModuleID, ModuleInfo> * m_iMap,
+	          BOOL fRejit,
+	          WCHAR wszModule[BUFSIZE],
+	          WCHAR wszClass[BUFSIZE],
+	          WCHAR wszFunc[BUFSIZE]);
 
 // [private] Gets the MethodDef from the module, class and function names.
 BOOL GetTokensFromNames(IDToInfoMap<ModuleID, ModuleInfo> * mMap, LPCWSTR wszModule, LPCWSTR wszClass, LPCWSTR wszFunction, ModuleID * moduleIDs, mdMethodDef * methodDefs, int cElementsMax,  int * pcMethodsFound);
@@ -1794,10 +1790,10 @@ void ProfilerCallback::LaunchLogListener()
 	DeleteFile(g_wszResultFilePath);
 	RESPONSE_APPEND(L"New profiler session lauched.");
 
-	// Create the container for the arguments.
-	threadargs * args = new threadargs();
-	args->m_pCallback = g_pCallbackObject;
-	args->m_iMap = &m_moduleIDToInfoMap;
+	WCHAR wszModule[] = L"SampleApp";
+	WCHAR wszClass[] = L"Main";
+	WCHAR wszFunc[] = L"Do";
+	ReadFile(g_pCallbackObject, &m_moduleIDToInfoMap, TRUE, wszModule, wszClass, wszFunc);
 }
 
 // [private] Wrapper method for the ICorProfilerCallback::RequestReJIT method, managing its errors.
@@ -1888,105 +1884,75 @@ bool FileExists(const PCWSTR wszFilepath)
 }
 
 // [private] Reads and runs a command from the command file.
-void ReadFile(FILE * fFile, LPVOID args)
+void ReadFile(ICorProfilerCallback * m_pCallback,
+	          IDToInfoMap<ModuleID, ModuleInfo> * m_iMap,
+	          BOOL fRejit,
+	          WCHAR wszModule[BUFSIZE],
+	          WCHAR wszClass[BUFSIZE],
+	          WCHAR wszFunc[BUFSIZE])
 {
 	// Get a line.
 	unsigned int refid = 0;
-	WCHAR wszCommand[BUFSIZE], wszModule[BUFSIZE], wszClass[BUFSIZE], wszFunc[BUFSIZE];
-	int nParsed = fwscanf_s(fFile,
-		L"%u>\t%s\t%s\t%s%s\n",
-		&refid,
-		wszCommand, BUFSIZE,
-		wszModule, BUFSIZE,
-		wszClass, BUFSIZE,
-		wszFunc, BUFSIZE);
 
-	// Need all elements, or at least 0>quitcommand.
-	if (nParsed == 5 || (nParsed > 1 && refid == 0))
+	// Get the information necessary to rejit / revert, and then do it
+	const int MAX_METHODS = 20;
+	int cMethodsFound = 0;
+	ModuleID moduleIDs[MAX_METHODS] = { 0 };
+	mdMethodDef methodDefs[MAX_METHODS] = { 0 };
+	if (::GetTokensFromNames(
+		m_iMap,
+		wszModule,
+		wszClass,
+		wszFunc,
+		moduleIDs,
+		methodDefs,
+		_countof(moduleIDs),
+		&cMethodsFound))
 	{
 
-		if (refid == 0)
+		// This is a current command. Execute it.
+		g_nLastRefid = refid;
+
+		for (int i = 0; i < cMethodsFound; i++)
 		{
-			g_bShouldExit = (wcscmp(wszCommand, CMD_QUIT) == 0);
-
-			if (!g_bShouldExit)
-			{
-				RESPONSE_ERROR(L"\"0>\t" << wszCommand << L"\" is not a valid command.");
-			}
+			// Update this module's version in the mapping.
+			MethodDefToLatestVersionMap * pMethodDefToLatestVersionMap =
+				m_moduleIDToInfoMap.Lookup(moduleIDs[i]).m_pMethodDefToLatestVersionMap;
+			pMethodDefToLatestVersionMap->Update(methodDefs[i], fRejit ? g_nLastRefid : 0);
 		}
-		else if (refid > g_nLastRefid)
+
+		HRESULT hr;
+		if (fRejit)
 		{
-			if ((wcscmp(wszCommand, CMD_REJITFUNC) == 0) ||
-                (wcscmp(wszCommand, CMD_REVERTFUNC) == 0))
-			{
-				// Get the information necessary to rejit / revert, and then do it
-                BOOL fRejit = (wcscmp(wszCommand, CMD_REJITFUNC) == 0);
-                const int MAX_METHODS = 20;
-                int cMethodsFound = 0;
-                ModuleID moduleIDs[MAX_METHODS] = { 0 };
-                mdMethodDef methodDefs[MAX_METHODS] = { 0 };
-				if  (::GetTokensFromNames(
-					((threadargs *)args)->m_iMap,
-					wszModule,
-					wszClass,
-					wszFunc,
-					moduleIDs,
-                    methodDefs,
-                    _countof(moduleIDs),
-                    &cMethodsFound))
-				{
-
-					// This is a current command. Execute it.
-					g_nLastRefid = refid;
-
-                    for (int i=0; i < cMethodsFound; i++)
-                    {
-					    // Update this module's version in the mapping.
-					    MethodDefToLatestVersionMap * pMethodDefToLatestVersionMap =
-						    m_moduleIDToInfoMap.Lookup(moduleIDs[i]).m_pMethodDefToLatestVersionMap;
-					    pMethodDefToLatestVersionMap->Update(methodDefs[i], fRejit ? g_nLastRefid : 0);
-                    }
-
-					HRESULT hr;
-                    if (fRejit)
-                    {
-                        hr = ((ProfilerCallback *)((threadargs *)args)->m_pCallback)->
-                            CallRequestReJIT(
-                            cMethodsFound,          // Number of functions being rejitted
-                            moduleIDs,              // Pointer to the start of the ModuleID array
-                            methodDefs);            // Pointer to the start of the mdMethodDef array
-                    }
-                    else
-                    {
-                        hr = ((ProfilerCallback *)((threadargs *)args)->m_pCallback)->
-                            CallRequestRevert(
-                            cMethodsFound,          // Number of functions being reverted
-                            moduleIDs,              // Pointer to the start of the ModuleID array
-                            methodDefs);            // Pointer to the start of the mdMethodDef array
-                    }
-
-					if (FAILED(hr))
-					{
-						RESPONSE_IS(g_nLastRefid, RSP_REJITFAILURE, wszModule, wszClass, wszFunc);
-					}
-					else
-					{
-						RESPONSE_IS(g_nLastRefid, RSP_REJITSUCCESS, wszModule, wszClass, wszFunc);
-					}
-
-				}
-				else
-				{
-					RESPONSE_ERROR(L"Module, class, or function not found. Maybe module is not loaded yet?");
-					LOG_APPEND(L"ERROR: Module, class, or function not found. Maybe module is not loaded yet?");
-				}
-			}
-			else
-			{
-				// We don't know how to deal with prof commands that aren't rejit / revert.
-				RESPONSE_ERROR(L"\"" << refid << L">\t" << wszCommand << L"\" is not a valid command.");
-			}
+			hr = ((ProfilerCallback *)m_pCallback)->
+				CallRequestReJIT(
+					cMethodsFound,          // Number of functions being rejitted
+					moduleIDs,              // Pointer to the start of the ModuleID array
+					methodDefs);            // Pointer to the start of the mdMethodDef array
 		}
+		else
+		{
+			hr = ((ProfilerCallback *)m_pCallback)->
+				CallRequestRevert(
+					cMethodsFound,          // Number of functions being reverted
+					moduleIDs,              // Pointer to the start of the ModuleID array
+					methodDefs);            // Pointer to the start of the mdMethodDef array
+		}
+
+		if (FAILED(hr))
+		{
+			RESPONSE_IS(g_nLastRefid, RSP_REJITFAILURE, wszModule, wszClass, wszFunc);
+		}
+		else
+		{
+			RESPONSE_IS(g_nLastRefid, RSP_REJITSUCCESS, wszModule, wszClass, wszFunc);
+		}
+
+	}
+	else
+	{
+		RESPONSE_ERROR(L"Module, class, or function not found. Maybe module is not loaded yet?");
+		LOG_APPEND(L"ERROR: Module, class, or function not found. Maybe module is not loaded yet?");
 	}
 }
 
