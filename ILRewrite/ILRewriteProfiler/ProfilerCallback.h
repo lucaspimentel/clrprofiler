@@ -361,7 +361,6 @@ private:
 	HRESULT AddPInvoke(IMetaDataEmit * pEmit, mdTypeDef td, LPCWSTR wszName, mdModuleRef modrefTarget, mdMethodDef * pmdPInvoke);
 	HRESULT GetSecuritySafeCriticalAttributeToken(IMetaDataImport * pImport, mdMethodDef * pmdSafeCritical);
 	HRESULT AddManagedHelperMethod(IMetaDataEmit * pEmit, mdTypeDef td, LPCWSTR wszName, mdMethodDef mdTargetPInvoke, ULONG rvaDummy, mdMethodDef mdSafeCritical, mdMethodDef * pmdHelperMethod);
-	void AddHelperMethodDefs(IMetaDataImport * pImport, IMetaDataEmit * pEmit);
 	BOOL FindMscorlibReference(IMetaDataAssemblyImport * pAssemblyImport, mdAssemblyRef * rgAssemblyRefs, ULONG cAssemblyRefs, mdAssemblyRef * parMscorlib);
 
 	// Pipe operations with the GUI
@@ -382,7 +381,6 @@ private:
 
 	volatile long m_refCount;
 	ModuleID m_modidMscorlib;
-	BOOL m_fInstrumentationHooksInSeparateAssembly;
 	DWORD m_dwThresholdMs;
 	DWORD m_dwShadowStackTlsIndex;
 

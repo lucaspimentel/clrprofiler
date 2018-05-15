@@ -245,7 +245,6 @@ HRESULT ProfilerCallback::CreateObject(REFIID riid, void **ppInterface)
 // [public] Creates a new instance of the profiler and zeroes all members
 ProfilerCallback::ProfilerCallback() :
     m_pProfilerInfo(NULL),
-    m_fInstrumentationHooksInSeparateAssembly(TRUE),
     m_mdIntPtrExplicitCast(mdTokenNil),
     m_mdEnterPInvoke(mdTokenNil),
     m_mdExitPInvoke(mdTokenNil),
@@ -487,14 +486,9 @@ HRESULT ProfilerCallback::ModuleLoadFinished(ModuleID moduleID, HRESULT hrStatus
         L", LoadAddress = " << HEX(pbBaseLoadAddr) << L", AppDomainID = " << HEX(appDomainID) <<
         L", ADName = " << wszAppDomainName);
 
-    BOOL fPumpHelperMethodsIntoThisModule = FALSE;
     if (::ContainsAtEnd(wszName, L"mscorlib.dll"))
     {
         m_modidMscorlib = moduleID;
-        if (!m_fInstrumentationHooksInSeparateAssembly)
-        {
-            fPumpHelperMethodsIntoThisModule = TRUE;
-        }
     }
 
     // Grab metadata interfaces
@@ -525,11 +519,6 @@ HRESULT ProfilerCallback::ModuleLoadFinished(ModuleID moduleID, HRESULT hrStatus
             HEX(moduleID) << L" (" << wszName << L")");
     }
 
-    if (fPumpHelperMethodsIntoThisModule)
-    {
-        AddHelperMethodDefs(pImport, pEmit);
-    }
-
     // Store module info in our list
 
     LOG_APPEND(L"Adding module to list...");
@@ -546,48 +535,35 @@ HRESULT ProfilerCallback::ModuleLoadFinished(ModuleID moduleID, HRESULT hrStatus
 
     moduleInfo.m_pMethodDefToLatestVersionMap = new MethodDefToLatestVersionMap();
 
-    if (fPumpHelperMethodsIntoThisModule)
+    // Add the references to our helper methods.
+
+    COMPtrHolder<IMetaDataAssemblyEmit> pAssemblyEmit;
     {
-        // We're operating on mscorlib and the helper methods are being pumped directly into it.
-        // So we reference (from within mscorlib) the helpers via methodDefs, not memberRefs.
+        COMPtrHolder<IUnknown> pUnk;
 
-        assert(m_mdEnter != mdTokenNil);
-        assert(m_mdExit != mdTokenNil);
-        moduleInfo.m_mdEnterProbeRef = m_mdEnter;
-        moduleInfo.m_mdExitProbeRef = m_mdExit;
+        hr = m_pProfilerInfo->GetModuleMetaData(moduleID, ofWrite, IID_IMetaDataAssemblyEmit, &pUnk);
+        LOG_IFFAILEDRET(hr, L"IID_IMetaDataEmit: GetModuleMetaData failed for ModuleID = " <<
+            HEX(moduleID) << L" (" << wszName << L")");
+
+        hr = pUnk->QueryInterface(IID_IMetaDataAssemblyEmit, (LPVOID *)&pAssemblyEmit);
+        LOG_IFFAILEDRET(hr, L"IID_IMetaDataEmit: QueryInterface failed for ModuleID = " <<
+            HEX(moduleID) << L" (" << wszName << L")");
     }
-    else
+
+    COMPtrHolder<IMetaDataAssemblyImport> pAssemblyImport;
     {
-        // Add the references to our helper methods.
+        COMPtrHolder<IUnknown> pUnk;
 
-        COMPtrHolder<IMetaDataAssemblyEmit> pAssemblyEmit;
-        {
-            COMPtrHolder<IUnknown> pUnk;
+        hr = m_pProfilerInfo->GetModuleMetaData(moduleID, ofRead, IID_IMetaDataAssemblyImport, &pUnk);
+        LOG_IFFAILEDRET(hr, L"IID_IMetaDataImport: GetModuleMetaData failed for ModuleID = " <<
+            HEX(moduleID) << L" (" << wszName << L")");
 
-            hr = m_pProfilerInfo->GetModuleMetaData(moduleID, ofWrite, IID_IMetaDataAssemblyEmit, &pUnk);
-            LOG_IFFAILEDRET(hr, L"IID_IMetaDataEmit: GetModuleMetaData failed for ModuleID = " <<
-                HEX(moduleID) << L" (" << wszName << L")");
-
-            hr = pUnk->QueryInterface(IID_IMetaDataAssemblyEmit, (LPVOID *)&pAssemblyEmit);
-            LOG_IFFAILEDRET(hr, L"IID_IMetaDataEmit: QueryInterface failed for ModuleID = " <<
-                HEX(moduleID) << L" (" << wszName << L")");
-        }
-
-        COMPtrHolder<IMetaDataAssemblyImport> pAssemblyImport;
-        {
-            COMPtrHolder<IUnknown> pUnk;
-
-            hr = m_pProfilerInfo->GetModuleMetaData(moduleID, ofRead, IID_IMetaDataAssemblyImport, &pUnk);
-            LOG_IFFAILEDRET(hr, L"IID_IMetaDataImport: GetModuleMetaData failed for ModuleID = " <<
-                HEX(moduleID) << L" (" << wszName << L")");
-
-            hr = pUnk->QueryInterface(IID_IMetaDataAssemblyImport, (LPVOID *)&pAssemblyImport);
-            LOG_IFFAILEDRET(hr, L"IID_IMetaDataImport: QueryInterface failed for ModuleID = " <<
-                HEX(moduleID) << L" (" << wszName << L")");
-        }
-
-        AddMemberRefs(pAssemblyImport, pAssemblyEmit, pEmit, &moduleInfo);
+        hr = pUnk->QueryInterface(IID_IMetaDataAssemblyImport, (LPVOID *)&pAssemblyImport);
+        LOG_IFFAILEDRET(hr, L"IID_IMetaDataImport: QueryInterface failed for ModuleID = " <<
+            HEX(moduleID) << L" (" << wszName << L")");
     }
+
+    AddMemberRefs(pAssemblyImport, pAssemblyEmit, pEmit, &moduleInfo);
 
     // Append to the list!
     m_moduleIDToInfoMap.Update(moduleID, moduleInfo);
@@ -734,7 +710,6 @@ HRESULT ProfilerCallback::FunctionUnloadStarted(FunctionID functionID)
 // [public] Creates the IL for the managed leave/enter helpers.
 void ProfilerCallback::SetILFunctionBodyForManagedHelper(ModuleID moduleID, mdMethodDef methodDef)
 {
-    assert(!m_fInstrumentationHooksInSeparateAssembly);
     assert(moduleID == m_modidMscorlib);
     assert((methodDef == m_mdEnter) || (methodDef == m_mdExit));
 
@@ -1359,84 +1334,39 @@ void ProfilerCallback::AddMemberRefs(IMetaDataAssemblyImport * pAssemblyImport, 
     mdAssemblyRef assemblyRef = NULL;
     mdTypeRef typeRef = mdTokenNil;
 
-    if (m_fInstrumentationHooksInSeparateAssembly)
+    // Generate assemblyRef to ProfilerHelper.dll
+    BYTE rgbPublicKeyToken[] = { 0xfc, 0xb7, 0x40, 0xf6, 0x34, 0x46, 0xe2, 0xf2 };
+    WCHAR wszLocale[MAX_PATH];
+    wcscpy_s(wszLocale, L"neutral");
+
+    ASSEMBLYMETADATA assemblyMetaData;
+    ZeroMemory(&assemblyMetaData, sizeof(assemblyMetaData));
+    assemblyMetaData.usMajorVersion = 1;
+    assemblyMetaData.usMinorVersion = 0;
+    assemblyMetaData.usBuildNumber = 0;
+    assemblyMetaData.usRevisionNumber = 0;
+    assemblyMetaData.szLocale = wszLocale;
+    assemblyMetaData.cbLocale = _countof(wszLocale);
+
+    hr = pAssemblyEmit->DefineAssemblyRef(
+        (void *)rgbPublicKeyToken,
+        sizeof(rgbPublicKeyToken),
+        L"ProfilerHelper",
+        &assemblyMetaData,
+        NULL,                   // hash blob
+        NULL,                   // cb of hash blob
+        0,                      // flags
+        &assemblyRef);
+
+    if (FAILED(hr))
     {
-        // Generate assemblyRef to ProfilerHelper.dll
-        BYTE rgbPublicKeyToken[] = { 0xfc, 0xb7, 0x40, 0xf6, 0x34, 0x46, 0xe2, 0xf2 };
-        WCHAR wszLocale[MAX_PATH];
-        wcscpy_s(wszLocale, L"neutral");
-
-        ASSEMBLYMETADATA assemblyMetaData;
-        ZeroMemory(&assemblyMetaData, sizeof(assemblyMetaData));
-        assemblyMetaData.usMajorVersion = 1;
-        assemblyMetaData.usMinorVersion = 0;
-        assemblyMetaData.usBuildNumber = 0;
-        assemblyMetaData.usRevisionNumber = 0;
-        assemblyMetaData.szLocale = wszLocale;
-        assemblyMetaData.cbLocale = _countof(wszLocale);
-
-        hr = pAssemblyEmit->DefineAssemblyRef(
-            (void *)rgbPublicKeyToken,
-            sizeof(rgbPublicKeyToken),
-            L"ProfilerHelper",
-            &assemblyMetaData,
-            NULL,                   // hash blob
-            NULL,                   // cb of hash blob
-            0,                      // flags
-            &assemblyRef);
-
-        if (FAILED(hr))
-        {
-            LOG_APPEND(L"DefineAssemblyRef failed, hr = " << HEX(hr));
-        }
-    }
-    else
-    {
-        // Probes are being added to mscorlib. Find existing mscorlib assemblyRef.
-
-        HCORENUM hEnum = NULL;
-        mdAssemblyRef rgAssemblyRefs[20];
-        ULONG cAssemblyRefsReturned;
-        assemblyRef = mdTokenNil;
-
-        do
-        {
-            hr = pAssemblyImport->EnumAssemblyRefs(
-                &hEnum,
-                rgAssemblyRefs,
-                _countof(rgAssemblyRefs),
-                &cAssemblyRefsReturned);
-
-            if (FAILED(hr))
-            {
-                LOG_APPEND(L"EnumAssemblyRefs failed, hr = " << HEX(hr));
-                return;
-            }
-
-            if (cAssemblyRefsReturned == 0)
-            {
-                LOG_APPEND(L"Could not find an AssemblyRef to mscorlib");
-                return;
-            }
-        } while (!FindMscorlibReference(
-            pAssemblyImport,
-            rgAssemblyRefs,
-            cAssemblyRefsReturned,
-            &assemblyRef));
-
-        pAssemblyImport->CloseEnum(hEnum);
-        hEnum = NULL;
-
-        assert(assemblyRef != mdTokenNil);
+        LOG_APPEND(L"DefineAssemblyRef failed, hr = " << HEX(hr));
     }
 
     // Generate typeRef to ILRewriteProfilerHelper.ProfilerHelper or the pre-existing mscorlib type
     // that we're adding the managed helpers to.
 
-    LPCWSTR wszTypeToReference =
-        m_fInstrumentationHooksInSeparateAssembly ?
-        L"ILRewriteProfilerHelper.ProfilerHelper" :
-        k_wszHelpersContainerType;
+    LPCWSTR wszTypeToReference = L"ILRewriteProfilerHelper.ProfilerHelper";
 
     hr = pEmit->DefineTypeRefByName(
         assemblyRef,
@@ -1518,147 +1448,6 @@ BOOL ProfilerCallback::FindMscorlibReference(IMetaDataAssemblyImport * pAssembly
     }
 
     return FALSE;
-}
-
-// [private] Adds appropriate methodDefs to mscorlib for the managed helper probes.
-void ProfilerCallback::AddHelperMethodDefs(IMetaDataImport * pImport, IMetaDataEmit * pEmit)
-{
-    HRESULT hr;
-
-    assert(!m_fInstrumentationHooksInSeparateAssembly);
-
-    LOG_APPEND(L"Adding methodDefs to mscorlib metadata for managed helper probes");
-
-    // The helpers will need to call into System.IntPtr::op_Explicit(int64), so get methodDef now
-    mdTypeDef tdSystemIntPtr;
-    hr = pImport->FindTypeDefByName(L"System.IntPtr", mdTypeDefNil, &tdSystemIntPtr);
-
-    if (FAILED(hr))
-    {
-        LOG_APPEND(L"FindTypeDefByName(System.IntPtr) failed, hr = " << HEX(hr));
-        return;
-    }
-
-    COR_SIGNATURE intPtrOpExplicitSignature[] = {
-        IMAGE_CEE_CS_CALLCONV_DEFAULT,
-        1,               // 1 argument
-        ELEMENT_TYPE_I,  // return type is native int
-        ELEMENT_TYPE_I8, // argument type is int64
-    };
-
-    hr = pImport->FindMethod(
-        tdSystemIntPtr,
-        L"op_Explicit",
-        intPtrOpExplicitSignature,
-        sizeof(intPtrOpExplicitSignature),
-        &m_mdIntPtrExplicitCast);
-
-    if (FAILED(hr))
-    {
-        LOG_APPEND(L"FindMethod(System.IntPtr.op_Explicit(int64)) failed, hr = " << HEX(hr));
-        return;
-    }
-
-    // Put the managed helpers into this pre-existing mscorlib type
-    mdTypeDef tdHelpersContainer;
-    hr = pImport->FindTypeDefByName(k_wszHelpersContainerType, mdTypeDefNil, &tdHelpersContainer);
-
-    if (FAILED(hr))
-    {
-        LOG_APPEND(L"FindTypeDefByName(" << k_wszHelpersContainerType <<
-            L") failed, hr = " << HEX(hr));
-        return;
-    }
-
-    // Get a dummy method implementation RVA (CLR doesn't like you passing 0).  Pick a
-    // ctor on the same type.
-    COR_SIGNATURE ctorSignature[] =
-    {
-        IMAGE_CEE_CS_CALLCONV_HASTHIS, //__stdcall
-        0,
-        ELEMENT_TYPE_VOID
-    };
-
-    mdMethodDef mdCtor = NULL;
-    hr = pImport->FindMethod(
-        tdHelpersContainer,
-        L".ctor",
-        ctorSignature,
-        sizeof(ctorSignature),
-        &mdCtor);
-
-    if (FAILED(hr))
-    {
-        LOG_APPEND(L"FindMethod(" << k_wszHelpersContainerType <<
-            L"..ctor) failed, hr = " << HEX(hr));
-        return;
-    }
-
-    ULONG rvaCtor;
-    hr = pImport->GetMethodProps(
-        mdCtor,
-        NULL,		   // Put method's class here.
-        NULL,		   // Put method's name here.
-        0,			   // Size of szMethod buffer in wide chars.
-        NULL,		   // Put actual size here
-        NULL,		   // Put flags here.
-        NULL,		   // [OUT] point to the blob value of meta data
-        NULL,		   // [OUT] actual size of signature blob
-        &rvaCtor,
-        NULL);
-
-    if (FAILED(hr))
-    {
-        LOG_APPEND(L"GetMethodProps(" << k_wszHelpersContainerType <<
-            L"..ctor) failed, hr = " << HEX(hr));
-        return;
-    }
-
-    // Generate reference to unmanaged profiler DLL (i.e., us)
-    mdModuleRef modrefNativeExtension;
-    hr = pEmit->DefineModuleRef(L"ILRewriteProfiler", &modrefNativeExtension);
-
-    if (FAILED(hr))
-    {
-        LOG_APPEND(L"DefineModuleRef against the native profiler DLL failed, hr = " << HEX(hr));
-        return;
-    }
-
-    // Generate the PInvokes into the profiler DLL
-    AddPInvoke(
-        pEmit,
-        tdHelpersContainer,
-        L"NtvEnteredFunction",
-        modrefNativeExtension,
-        &m_mdEnterPInvoke);
-
-    AddPInvoke(
-        pEmit,
-        tdHelpersContainer,
-        L"NtvExitedFunction",
-        modrefNativeExtension,
-        &m_mdExitPInvoke);
-
-    // Generate the SafeCritical managed methods which call the PInvokes
-    mdMethodDef mdSafeCritical;
-    GetSecuritySafeCriticalAttributeToken(pImport, &mdSafeCritical);
-
-    AddManagedHelperMethod(
-        pEmit,
-        tdHelpersContainer,
-        k_wszEnteredFunctionProbeName,
-        m_mdEnterPInvoke,
-        rvaCtor,
-        mdSafeCritical, &m_mdEnter);
-
-    AddManagedHelperMethod(
-        pEmit,
-        tdHelpersContainer,
-        k_wszExitedFunctionProbeName,
-        m_mdExitPInvoke,
-        rvaCtor,
-        mdSafeCritical,
-        &m_mdExit);
 }
 
 // [private] Creates a PInvoke method to inject into mscorlib.
