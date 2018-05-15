@@ -127,9 +127,6 @@ struct threadargs
 
 //************************************************************************************************//
 
-// [private] Checks to see if the given file has any changes, and if so executes the new commands.
-DWORD WINAPI MonitorFile(LPVOID pFileAndModuleMap);
-
 // [private] Checks to see if the given file exists.
 bool FileExists(const PCWSTR wszFilepath);
 
@@ -354,7 +351,7 @@ HRESULT ProfilerCallback::Initialize(IUnknown *pICorProfilerInfoUnk)
 
 	m_dwShadowStackTlsIndex = TlsAlloc();
 
-	LaunchLogListener(g_wszCmdFilePath);
+	LaunchLogListener();
 
 	RESULT_APPEND(L"<html><body><pre>");
 
@@ -1788,7 +1785,7 @@ HRESULT ProfilerCallback::AddManagedHelperMethod(IMetaDataEmit * pEmit, mdTypeDe
 }
 
 // [private] Launches the listener for file changes to ILRWP_watchercommands.log.
-void ProfilerCallback::LaunchLogListener(LPCWSTR wszPathCommandFile)
+void ProfilerCallback::LaunchLogListener()
 {
 	g_nLastRefid = 0;
 
@@ -1797,49 +1794,10 @@ void ProfilerCallback::LaunchLogListener(LPCWSTR wszPathCommandFile)
 	DeleteFile(g_wszResultFilePath);
 	RESPONSE_APPEND(L"New profiler session lauched.");
 
-	// Read the method of injection (mscorlib or not)
-
-	if (FileExists(wszPathCommandFile))
-	{
-		// Read and execute first command.
-		FILE * fFile = _wfsopen(wszPathCommandFile, L"rt", _SH_DENYWR);
-		WCHAR pumpintomscorlib = L'q';
-		int nParsed = fwscanf_s(fFile, MSCORLIBCOMMAND, &pumpintomscorlib);
-		fclose(fFile);
-
-		if (nParsed == 1 && pumpintomscorlib == L't')
-		{
-			// We're pumping the helpers into mscorlib
-			m_fInstrumentationHooksInSeparateAssembly = FALSE;
-		}
-		else if (nParsed != 1 || pumpintomscorlib != L'f')
-		{
-			LOG_APPEND(L"ERROR: Incorrect mscorlib command format, or " << g_wszCmdFilePath <<
-				L" did not exist at launch time. Assuming we won't pump into mscorlib.");
-		}
-	}
-
-
 	// Create the container for the arguments.
 	threadargs * args = new threadargs();
 	args->m_pCallback = g_pCallbackObject;
-	args->m_wszpath = wszPathCommandFile;
 	args->m_iMap = &m_moduleIDToInfoMap;
-
-	DWORD  dwThreadID;
-	HANDLE hThread = CreateThread(
-		NULL,          // Default security attributes
-		0,             // Default stack size
-		::MonitorFile, // Function name
-		(LPVOID)args,  // Function parameters, wrapped in a threadargs struct
-		0,             // Start the thread immediately after creation
-		&dwThreadID);  // ID of created thread
-
-	if (hThread == NULL)
-	{
-		LOG_APPEND(L"Failed to create a thread that is supposed to wait on a detach pipe, hr = " <<
-			HEX(HRESULT_FROM_WIN32(GetLastError())));
-	}
 }
 
 // [private] Wrapper method for the ICorProfilerCallback::RequestReJIT method, managing its errors.
@@ -1920,59 +1878,6 @@ void ProfilerCallback::GetClassAndFunctionNamesFromMethodDef(IMetaDataImport * p
 		LOG_APPEND(L"GetTypeDefProps failed in ModuleID = " << HEX(moduleID) <<
 			L" for typeDef = " << HEX(typeDef) << L", hr = " << HEX(hr));
 	}
-}
-
-// [private] Checks to see if the command file has any changes, and if so runs the new commands.
-DWORD WINAPI MonitorFile(LPVOID args)
-{
-	// Monitor file until app shutdown.
-	while(!g_bShouldExit)
-	{
-		try
-		{
-			// We wipe the command file at launch, so wait until it's back again.
-			if (FileExists(((threadargs *)args)->m_wszpath))
-			{
-				// Open the file in a format we can more easily read from.
-				FILE * fFile = _wfsopen(((threadargs *)args)->m_wszpath, L"rt", _SH_DENYWR);
-                if (fFile != NULL)
-                {
-				    // Skip over first line.
-				    int pumpintomscorlib; // Don't actually do anything with this, but that's what the line is.
-				    int nParsed = fwscanf_s(fFile, MSCORLIBCOMMAND, &pumpintomscorlib);
-
-				    // Read and execute all new commands.
-				    while (!feof(fFile))
-				    {
-					    ReadFile(fFile, args);
-				    }
-
-				    // All done with the file for this pass, close it.
-				    fclose(fFile);
-                }
-			}
-		}
-		catch (int e) // We want this thread to be silent. Bad form, but we're logging it at least.
-		{
-			LOG_APPEND(L"ERROR: Command file could not be read. Error code " << e << L".");
-		}
-
-		// Delay next read, so this thread doesn't take up all the resources for the application.
-		Sleep(1000);
-	}
-
-	// Begin shutdown process.
-
-	// Remove dynamically-allocated structures.
-	delete(args);
-
-	g_nLastRefid = 0; // Return refid to 0, since we're done.
-
-	// Clean up complete. Application can exit safely.
-	RESPONSE_APPEND(RSP_QUITSUCCESS);
-	g_bSafeToExit = TRUE;
-
-	return S_OK;
 }
 
 // [private] Checks to see if the given file exists.

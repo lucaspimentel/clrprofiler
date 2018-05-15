@@ -28,8 +28,6 @@ extern const GUID __declspec(selectany) CLSID_PROFILER = {
 
 extern std::wofstream g_wLogFile;
 
-extern WCHAR g_wszCmdFilePath[];
-extern WCHAR g_wszResponseFilePath[];
 extern WCHAR g_wszLogFilePath[];
 extern WCHAR g_wszResultFilePath[];
 
@@ -367,7 +365,7 @@ private:
 	BOOL FindMscorlibReference(IMetaDataAssemblyImport * pAssemblyImport, mdAssemblyRef * rgAssemblyRefs, ULONG cAssemblyRefs, mdAssemblyRef * parMscorlib);
 
 	// Pipe operations with the GUI
-	void LaunchLogListener(LPCWSTR wszPath);
+	void LaunchLogListener();
 	std::vector<ShadowStackFrameInfo> * GetShadowStack();
 	void GetClassAndFunctionNamesFromMethodDef(IMetaDataImport * pImport, ModuleID moduleID, mdMethodDef methodDef, LPWSTR wszTypeDefName, ULONG cchTypeDefName, LPWSTR wszMethodDefName, ULONG cchMethodDefName);
 
@@ -378,7 +376,6 @@ public:
 	void SetCallLoggingActive(bool active);
 	bool DumpHeap(DWORD timeOut);
 	void LogComment(const wchar_t *commentString);
-	void SendMessageToUI(const char *message);
 
 private:
 	ICorProfilerInfo4 * m_pProfilerInfo;
