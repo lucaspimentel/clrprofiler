@@ -551,7 +551,10 @@ HRESULT ProfilerCallback::ModuleLoadFinished(ModuleID moduleID, HRESULT hrStatus
 
     if (::ContainsAtEnd(wszName, L"SampleApp.exe"))
     {
-        ReJitMethod(&m_moduleIDToInfoMap, TRUE, moduleID, L"SampleApp.Two", L"one two jaz lul");
+        ReJitMethod(&m_moduleIDToInfoMap, TRUE, moduleID, L"SampleApp.Two", L"one");
+        ReJitMethod(&m_moduleIDToInfoMap, TRUE, moduleID, L"SampleApp.Two", L"two");
+        ReJitMethod(&m_moduleIDToInfoMap, TRUE, moduleID, L"SampleApp.Two", L"jaz");
+        ReJitMethod(&m_moduleIDToInfoMap, TRUE, moduleID, L"SampleApp.Two", L"lul");
     }
 
     /*
@@ -1666,9 +1669,7 @@ void ReJitMethod(
         _countof(moduleIDs),
         &cMethodsFound))
     {
-
-        // This is a current command. Execute it.
-        g_nLastRefid = 0;
+        g_nLastRefid++;
 
         for (int i = 0; i < cMethodsFound; i++)
         {
