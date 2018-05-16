@@ -326,7 +326,7 @@ HRESULT ProfilerCallback::Initialize(IUnknown *pICorProfilerInfoUnk)
 
     m_dwShadowStackTlsIndex = TlsAlloc();
 
-    LaunchLogListener();
+    DeleteFile(g_wszResultFilePath);
 
     RESULT_APPEND(L"<html><body><pre>");
 
@@ -1554,20 +1554,6 @@ HRESULT ProfilerCallback::AddManagedHelperMethod(IMetaDataEmit * pEmit, mdTypeDe
         L"new managed helper method " << wszName);
 
     return hr;
-}
-
-// [private] Launches the listener for file changes to ILRWP_watchercommands.log.
-void ProfilerCallback::LaunchLogListener()
-{
-    g_nLastRefid = 0;
-
-    // Wipe the other log files for the new session.
-    DeleteFile(g_wszResultFilePath);
-
-    //WCHAR wszModule[] = L"SampleApp";
-    //WCHAR wszClass[] = L"Main";
-    //WCHAR wszFunc[] = L"Do";
-    //ReJitMethod(g_pCallbackObject, &m_moduleIDToInfoMap, TRUE, wszModule, wszClass, wszFunc);
 }
 
 // [private] Wrapper method for the ICorProfilerCallback::RequestReJIT method, managing its errors.
