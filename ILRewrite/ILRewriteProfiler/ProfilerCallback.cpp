@@ -112,15 +112,15 @@ extern HRESULT SetILForManagedHelper(
 bool FileExists(const PCWSTR wszFilepath);
 
 // [private] Reads and executes a command from the file.
-void ReJitMethod(ICorProfilerCallback * m_pCallback,
+void ReJitMethod(
     IDToInfoMap<ModuleID, ModuleInfo> * m_iMap,
     BOOL fRejit,
-    WCHAR wszModule[BUFSIZE],
+    ModuleID moduleID,
     WCHAR wszClass[BUFSIZE],
     WCHAR wszFunc[BUFSIZE]);
 
 // [private] Gets the MethodDef from the module, class and function names.
-BOOL GetTokensFromNames(IDToInfoMap<ModuleID, ModuleInfo> * mMap, LPCWSTR wszModule, LPCWSTR wszClass, LPCWSTR wszFunction, ModuleID * moduleIDs, mdMethodDef * methodDefs, int cElementsMax, int * pcMethodsFound);
+BOOL GetTokensFromNames(IDToInfoMap<ModuleID, ModuleInfo> * mMap, ModuleID moduleID, LPCWSTR wszClass, LPCWSTR wszFunction, ModuleID * moduleIDs, mdMethodDef * methodDefs, int cElementsMax, int * pcMethodsFound);
 
 // [private] Returns TRUE iff wszContainer ends with wszProspectiveEnding (case-insensitive).
 BOOL ContainsAtEnd(LPCWSTR wszContainer, LPCWSTR wszProspectiveEnding);
@@ -549,6 +549,12 @@ HRESULT ProfilerCallback::ModuleLoadFinished(ModuleID moduleID, HRESULT hrStatus
     m_moduleIDToInfoMap.Update(moduleID, moduleInfo);
     LOG_APPEND(L"Successfully added module to list.");
 
+    if (::ContainsAtEnd(wszName, L"SampleApp.exe"))
+    {
+        ReJitMethod(&m_moduleIDToInfoMap, TRUE, moduleID, L"SampleApp.Two", L"one two jaz lul");
+    }
+
+    /*
     // If we already rejitted functions in other modules with a matching path, then
     // pre-rejit those functions in this module as well.  This takes care of the case
     // where we rejitted functions in a module loaded in one domain, and we just now
@@ -620,6 +626,7 @@ HRESULT ProfilerCallback::ModuleLoadFinished(ModuleID moduleID, HRESULT hrStatus
         LOG_APPEND(L"Auto-pre-rejitting " << rgMethodDefs.size() << L"  methods for modules that have just loaded into an AppDomain different from that containing a module from a prior ReJIT request.");
         CallRequestReJIT((UINT)rgMethodDefs.size(), rgModuleIDs.data(), rgMethodDefs.data());
     }
+    */
 
     return S_OK;
 }
@@ -1557,10 +1564,10 @@ void ProfilerCallback::LaunchLogListener()
     // Wipe the other log files for the new session.
     DeleteFile(g_wszResultFilePath);
 
-    WCHAR wszModule[] = L"SampleApp";
-    WCHAR wszClass[] = L"Main";
-    WCHAR wszFunc[] = L"Do";
-    ReJitMethod(g_pCallbackObject, &m_moduleIDToInfoMap, TRUE, wszModule, wszClass, wszFunc);
+    //WCHAR wszModule[] = L"SampleApp";
+    //WCHAR wszClass[] = L"Main";
+    //WCHAR wszFunc[] = L"Do";
+    //ReJitMethod(g_pCallbackObject, &m_moduleIDToInfoMap, TRUE, wszModule, wszClass, wszFunc);
 }
 
 // [private] Wrapper method for the ICorProfilerCallback::RequestReJIT method, managing its errors.
@@ -1651,16 +1658,13 @@ bool FileExists(const PCWSTR wszFilepath)
 }
 
 // [private] Reads and runs a command from the command file.
-void ReJitMethod(ICorProfilerCallback * m_pCallback,
+void ReJitMethod(
     IDToInfoMap<ModuleID, ModuleInfo> * m_iMap,
     BOOL fRejit,
-    WCHAR wszModule[BUFSIZE],
+    ModuleID moduleID,
     WCHAR wszClass[BUFSIZE],
     WCHAR wszFunc[BUFSIZE])
 {
-    // Get a line.
-    unsigned int refid = 0;
-
     // Get the information necessary to rejit / revert, and then do it
     const int MAX_METHODS = 20;
     int cMethodsFound = 0;
@@ -1668,7 +1672,7 @@ void ReJitMethod(ICorProfilerCallback * m_pCallback,
     mdMethodDef methodDefs[MAX_METHODS] = { 0 };
     if (::GetTokensFromNames(
         m_iMap,
-        wszModule,
+        moduleID,
         wszClass,
         wszFunc,
         moduleIDs,
@@ -1678,7 +1682,7 @@ void ReJitMethod(ICorProfilerCallback * m_pCallback,
     {
 
         // This is a current command. Execute it.
-        g_nLastRefid = refid;
+        g_nLastRefid = 0;
 
         for (int i = 0; i < cMethodsFound; i++)
         {
@@ -1691,7 +1695,7 @@ void ReJitMethod(ICorProfilerCallback * m_pCallback,
         HRESULT hr;
         if (fRejit)
         {
-            hr = ((ProfilerCallback *)m_pCallback)->
+            hr = g_pCallbackObject->
                 CallRequestReJIT(
                     cMethodsFound,          // Number of functions being rejitted
                     moduleIDs,              // Pointer to the start of the ModuleID array
@@ -1699,7 +1703,7 @@ void ReJitMethod(ICorProfilerCallback * m_pCallback,
         }
         else
         {
-            hr = ((ProfilerCallback *)m_pCallback)->
+            hr = g_pCallbackObject->
                 CallRequestRevert(
                     cMethodsFound,          // Number of functions being reverted
                     moduleIDs,              // Pointer to the start of the ModuleID array
@@ -1713,7 +1717,7 @@ void ReJitMethod(ICorProfilerCallback * m_pCallback,
 }
 
 // [private] Gets the MethodDef from the module, class and function names.
-BOOL GetTokensFromNames(IDToInfoMap<ModuleID, ModuleInfo> * mMap, LPCWSTR wszModule, LPCWSTR wszClass, LPCWSTR wszFunction, ModuleID * moduleIDs, mdMethodDef * methodDefs, int cElementsMax, int * pcMethodsFound)
+BOOL GetTokensFromNames(IDToInfoMap<ModuleID, ModuleInfo> * mMap, ModuleID moduleID, LPCWSTR wszClass, LPCWSTR wszFunction, ModuleID * moduleIDs, mdMethodDef * methodDefs, int cElementsMax, int * pcMethodsFound)
 
 {
     HRESULT hr;
@@ -1729,10 +1733,11 @@ BOOL GetTokensFromNames(IDToInfoMap<ModuleID, ModuleInfo> * mMap, LPCWSTR wszMod
     ModuleIDToInfoMap::Const_Iterator iterator;
     for (iterator = mMap->Begin(); (iterator != mMap->End()) && (*pcMethodsFound < cElementsMax); iterator++)
     {
-        LPCWSTR wszModulePathCur = &(iterator->second.m_wszModulePath[0]);
+        //LPCWSTR wszModulePathCur = &(iterator->second.m_wszModulePath[0]);
 
         // Only matters if we have the right module name.
-        if (::ContainsAtEnd(wszModulePathCur, wszModule))
+        //if (::ContainsAtEnd(wszModulePathCur, wszModule))
+        if(iterator->first == moduleID)
         {
             hr = iterator->second.m_pImport->FindTypeDefByName(wszClass, mdTypeDefNil, &typeDef);
 
