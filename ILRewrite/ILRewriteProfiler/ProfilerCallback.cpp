@@ -72,12 +72,6 @@ std::wofstream g_wLogFile;
 std::wofstream g_wResultFile;
 BOOL g_fLogFilePathsInitiailized = FALSE;
 
-// I read this file written by GUI to tell me what to do
-WCHAR g_wszCmdFilePath[MAX_PATH] = { L'\0' };
-
-// I write to this file to respond to the GUI
-WCHAR g_wszResponseFilePath[MAX_PATH] = { L'\0' };
-
 // I write additional diagnostic info to this file
 WCHAR g_wszLogFilePath[MAX_PATH] = { L'\0' };
 
@@ -86,10 +80,6 @@ WCHAR g_wszResultFilePath[MAX_PATH] = { L'\0' };
 
 #define HEX(HR) L"0x" << std::hex << std::uppercase << HR << std::dec
 #define RESULT_APPEND(EXPR) do { g_wResultFile.open(g_wszResultFilePath, std::ios::app); g_wResultFile << L"\n" << EXPR; g_wResultFile.close(); } while(0)
-#define RESPONSE_LITERAL(EXPR) do { std::wofstream ofsLog; ofsLog.open(g_wszResponseFilePath, std::ios::app); ofsLog << EXPR; ofsLog.close(); } while(0)
-#define RESPONSE_APPEND(EXPR) RESPONSE_LITERAL(g_nLastRefid << L">" << EXPR << L"\n")
-#define RESPONSE_IS(REFID, EXPR, MODULE, CLASS, FUNC) RESPONSE_LITERAL(REFID << L">" << EXPR << L"\t" << MODULE << L"\t" << CLASS << L"\t" << FUNC << L"\n")
-#define RESPONSE_ERROR(EXPR) RESPONSE_APPEND(L"ERROR\tError: " << EXPR)
 #define LOG_APPEND(EXPR) do { g_wLogFile.open(g_wszLogFilePath, std::ios::app); g_wLogFile << L"\n" << EXPR; g_wLogFile.close(); } while(0)
 #define LOG_IFFAILEDRET(HR, EXPR) do { if (FAILED(HR)) { LOG_APPEND(EXPR << L", hr = " << HEX(HR)); return HR; } } while(0)
 
@@ -174,16 +164,6 @@ HRESULT ProfilerCallback::CreateObject(REFIID riid, void **ppInterface)
             return E_UNEXPECTED;
 
         *wszFinalSeparator = L'\0';
-
-        if (wcscpy_s(g_wszCmdFilePath, _countof(g_wszCmdFilePath), wszExeDir) != 0)
-            return HRESULT_FROM_WIN32(ERROR_INSUFFICIENT_BUFFER);
-        if (wcscat_s(g_wszCmdFilePath, _countof(g_wszCmdFilePath), L"\\ILRWP_watchercommands.log"))
-            return HRESULT_FROM_WIN32(ERROR_INSUFFICIENT_BUFFER);
-
-        if (wcscpy_s(g_wszResponseFilePath, _countof(g_wszResponseFilePath), wszExeDir) != 0)
-            return HRESULT_FROM_WIN32(ERROR_INSUFFICIENT_BUFFER);
-        if (wcscat_s(g_wszResponseFilePath, _countof(g_wszResponseFilePath), L"\\ILRWP_watcherresponse.log"))
-            return HRESULT_FROM_WIN32(ERROR_INSUFFICIENT_BUFFER);
 
         if (wcscpy_s(g_wszLogFilePath, _countof(g_wszLogFilePath), wszExeDir) != 0)
             return HRESULT_FROM_WIN32(ERROR_INSUFFICIENT_BUFFER);
@@ -1575,9 +1555,7 @@ void ProfilerCallback::LaunchLogListener()
     g_nLastRefid = 0;
 
     // Wipe the other log files for the new session.
-    DeleteFile(g_wszResponseFilePath);
     DeleteFile(g_wszResultFilePath);
-    RESPONSE_APPEND(L"New profiler session lauched.");
 
     WCHAR wszModule[] = L"SampleApp";
     WCHAR wszClass[] = L"Main";
@@ -1727,20 +1705,9 @@ void ReJitMethod(ICorProfilerCallback * m_pCallback,
                     moduleIDs,              // Pointer to the start of the ModuleID array
                     methodDefs);            // Pointer to the start of the mdMethodDef array
         }
-
-        if (FAILED(hr))
-        {
-            RESPONSE_IS(g_nLastRefid, RSP_REJITFAILURE, wszModule, wszClass, wszFunc);
-        }
-        else
-        {
-            RESPONSE_IS(g_nLastRefid, RSP_REJITSUCCESS, wszModule, wszClass, wszFunc);
-        }
-
     }
     else
     {
-        RESPONSE_ERROR(L"Module, class, or function not found. Maybe module is not loaded yet?");
         LOG_APPEND(L"ERROR: Module, class, or function not found. Maybe module is not loaded yet?");
     }
 }
