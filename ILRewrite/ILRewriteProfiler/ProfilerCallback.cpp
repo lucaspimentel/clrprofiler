@@ -28,17 +28,6 @@
 // Maximum buffer size for input from file
 #define BUFSIZE 2048
 
-// Command strings for communicating out-of-process.
-#define CMD_REJITFUNC L"pf"
-#define CMD_REVERTFUNC L"rf"
-#define CMD_QUIT L"qa"
-
-// Response strings for communicating out-of-process.
-#define RSP_REJITSUCCESS L"ps"
-#define RSP_REVERTSUCCESS L"rs"
-#define RSP_REJITFAILURE L"pf"
-#define RSP_REVERTFAILURE L"rf"
-#define RSP_QUITSUCCESS L"qs"
 
 // Make sure the probe type matches the computer's architecture
 #ifdef _WIN64
