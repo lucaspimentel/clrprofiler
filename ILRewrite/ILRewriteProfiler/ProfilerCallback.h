@@ -379,18 +379,17 @@ private:
 	ICorProfilerInfo4 * m_pProfilerInfo;
 
 	volatile long m_refCount;
-	ModuleID m_modidMscorlib;
 	DWORD m_dwThresholdMs;
 	DWORD m_dwShadowStackTlsIndex;
 
 	/* If the instrumented code must call into managed helpers that we pump into mscorlib (as
 	* opposed to calling into managed helpers statically compiled into ProfilerHelper.dll), then
 	* the tokens are used to refer to the helpers as they will be in modified mscorlib metadata. */
-	mdMethodDef m_mdIntPtrExplicitCast;
-	mdMethodDef m_mdEnterPInvoke;
-	mdMethodDef m_mdExitPInvoke;
-	mdMethodDef m_mdEnter;
-	mdMethodDef m_mdExit;
+	//mdMethodDef m_mdIntPtrExplicitCast;
+	//mdMethodDef m_mdEnterPInvoke;
+	//mdMethodDef m_mdExitPInvoke;
+	//mdMethodDef m_mdEnter;
+	//mdMethodDef m_mdExit;
 };
 
 // Note: Generally you should not have a single, global callback implementation, as that

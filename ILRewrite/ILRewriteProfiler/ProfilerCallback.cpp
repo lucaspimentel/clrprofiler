@@ -28,9 +28,6 @@
 // Maximum buffer size for input from file
 #define BUFSIZE 2048
 
-// String for mscorlib methods or not.
-#define MSCORLIBCOMMAND L"Inserting into mscorlib: %c\r\n"
-
 // Command strings for communicating out-of-process.
 #define CMD_REJITFUNC L"pf"
 #define CMD_REVERTFUNC L"rf"
@@ -225,12 +222,6 @@ HRESULT ProfilerCallback::CreateObject(REFIID riid, void **ppInterface)
 // [public] Creates a new instance of the profiler and zeroes all members
 ProfilerCallback::ProfilerCallback() :
     m_pProfilerInfo(NULL),
-    m_mdIntPtrExplicitCast(mdTokenNil),
-    m_mdEnterPInvoke(mdTokenNil),
-    m_mdExitPInvoke(mdTokenNil),
-    m_mdEnter(mdTokenNil),
-    m_mdExit(mdTokenNil),
-    m_modidMscorlib(NULL),
     m_refCount(0),
     m_dwShadowStackTlsIndex(0),
 
@@ -398,11 +389,6 @@ HRESULT ProfilerCallback::ModuleLoadFinished(ModuleID moduleID, HRESULT hrStatus
     LOG_APPEND(L"ModuleLoadFinished for " << wszName << L", ModuleID = " << HEX(moduleID) <<
         L", LoadAddress = " << HEX(pbBaseLoadAddr) << L", AppDomainID = " << HEX(appDomainID) <<
         L", ADName = " << wszAppDomainName);
-
-    if (::ContainsAtEnd(wszName, L"mscorlib.dll"))
-    {
-        m_modidMscorlib = moduleID;
-    }
 
     // Grab metadata interfaces
 
