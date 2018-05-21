@@ -161,6 +161,7 @@
   <ItemGroup>
     <ClCompile Include="ilrewriter.cpp" />
     <ClCompile Include="ProfilerCallback.cpp" />
+    <ClCompile Include="ProfilerCallback.empty.cpp" />
     <ClCompile Include="Rejitter.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
