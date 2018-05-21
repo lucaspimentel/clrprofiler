@@ -169,7 +169,7 @@ HRESULT ProfilerCallback::CreateObject(REFIID riid, void **ppInterface)
 
         if (wcscpy_s(g_wszResultFilePath, _countof(g_wszResultFilePath), wszExeDir) != 0)
             return HRESULT_FROM_WIN32(ERROR_INSUFFICIENT_BUFFER);
-        if (wcscat_s(g_wszResultFilePath, _countof(g_wszResultFilePath), L"\\ILRWP_RESULT.htm"))
+        if (wcscat_s(g_wszResultFilePath, _countof(g_wszResultFilePath), L"\\ILRWP_RESULT.txt"))
             return HRESULT_FROM_WIN32(ERROR_INSUFFICIENT_BUFFER);
 
         g_fLogFilePathsInitiailized = TRUE;
