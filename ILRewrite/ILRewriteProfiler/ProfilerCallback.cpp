@@ -49,9 +49,6 @@ LPCWSTR k_wszEnteredFunctionProbeName = L"MgdEnteredFunction32";
 LPCWSTR k_wszExitedFunctionProbeName = L"MgdExitedFunction32";
 #endif
 
-// When pumping managed helpers into mscorlib, stick them into this pre-existing mscorlib type
-LPCWSTR k_wszHelpersContainerType = L"System.CannotUnloadAppDomainException";
-
 // Note: Generally you should not have a single, global callback implementation, as that
 // prevents your profiler from analyzing multiply loaded in-process side-by-side CLRs.
 // However, this profiler implements the "profile-first" alternative of dealing with
