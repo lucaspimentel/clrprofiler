@@ -8,16 +8,12 @@
 
 #include "stdafx.h"
 #include "dllmain.hpp"
-#include "mscoree.h"
 #include "ProfilerCallback.h"
 #include <fstream>
 #include <iostream>
-#include <share.h>
 #include <vector>
 #include <windows.h>
-#include <io.h>
 #include <dos.h>
-#include <Windows.h>
 
 #undef _WIN32_WINNT
 #define _WIN32_WINNT	0x0403

@@ -8,10 +8,8 @@
 #define __PROFILER_CALLBACK_H__
 
 #include "basehdr.h"
-#include "mscoree.h"
 #include "stdafx.h"
 #include <corprof.h>
-#include <iostream>
 #include <fstream>
 #include <vector>
 #include <map>
