@@ -1,7 +1,7 @@
 ﻿// ==++==
-// 
+//
 //   Copyright (c) Microsoft Corporation.  All rights reserved.
-// 
+//
 // ==--==
 
 using System;
@@ -20,8 +20,8 @@ namespace SampleApp
 			Console.WriteLine("DOING THINGS");
 			Console.WriteLine("------------");
 			Random r = new Random();
-			int count = 0;
-			while ((count = (count + 1) % 5) != -1)
+
+			for(int count = 0; count < 5; count++)
 			{
 				Do(count);
 			}
@@ -31,12 +31,6 @@ namespace SampleApp
 		{
 			new Two();
 			Thread.Sleep(2000);
-
-			if (count == 0)
-			{
-				Console.Write(Environment.NewLine + "ARE YOU THERE? PRESS SOMETHING:");
-				Console.ReadKey(true);
-			}
 		}
 	}
 

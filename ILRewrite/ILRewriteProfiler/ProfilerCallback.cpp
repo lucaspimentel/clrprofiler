@@ -643,7 +643,7 @@ void ProfilerCallback::AddMemberRefs(IMetaDataAssemblyImport * pAssemblyImport, 
         ELEMENT_TYPE_U8,                    // arg 1: UInt64 moduleIDCur
         ELEMENT_TYPE_U4,                    // arg 2: UInt32 mdCur
         ELEMENT_TYPE_I4,                    // arg 3: int nVersionCur
-    };
+};
 #else //  ! _WIN64 (32-bit code follows)
     COR_SIGNATURE sigFunctionProbe[] = {
         IMAGE_CEE_CS_CALLCONV_DEFAULT,      // default calling convention
@@ -894,7 +894,7 @@ BOOL GetTokensFromNames(IDToInfoMap<ModuleID, ModuleInfo> * mMap, ModuleID modul
 
         // Only matters if we have the right module name.
         //if (::ContainsAtEnd(wszModulePathCur, wszModule))
-        if(iterator->first == moduleID)
+        if (iterator->first == moduleID)
         {
             hr = iterator->second.m_pImport->FindTypeDefByName(wszClass, mdTypeDefNil, &typeDef);
 

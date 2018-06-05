@@ -1,7 +1,7 @@
 // ==++==
-// 
+//
 //   Copyright (c) Microsoft Corporation.  All rights reserved.
-// 
+//
 // ==--==
 
 
@@ -38,12 +38,14 @@ namespace ILRewriteProfilerHelper
         [System.Security.SecuritySafeCritical]
         public static void MgdEnteredFunction32(UInt32 moduleIDCur, UInt32 mdCur, int nVersionCur)
         {
+            Console.WriteLine("MgdEnteredFunction32()");
             NtvEnteredFunction((IntPtr)moduleIDCur, mdCur, nVersionCur);
         }
 
         [System.Security.SecuritySafeCritical]
         public static void MgdEnteredFunction64(UInt64 moduleIDCur, UInt32 mdCur, int nVersionCur)
         {
+            Console.WriteLine("MgdEnteredFunction64()");
             NtvEnteredFunction((IntPtr)moduleIDCur, mdCur, nVersionCur);
         }
 
@@ -52,12 +54,14 @@ namespace ILRewriteProfilerHelper
         [System.Security.SecuritySafeCritical]
         public static void MgdExitedFunction32(UInt32 moduleIDCur, UInt32 mdCur, int nVersionCur)
         {
+            Console.WriteLine("MgdExitedFunction32()");
             NtvExitedFunction((IntPtr)moduleIDCur, mdCur, nVersionCur);
         }
 
         [System.Security.SecuritySafeCritical]
         public static void MgdExitedFunction64(UInt64 moduleIDCur, UInt32 mdCur, int nVersionCur)
         {
+            Console.WriteLine("MgdExitedFunction64()");
             NtvExitedFunction((IntPtr)moduleIDCur, mdCur, nVersionCur);
         }
     }
